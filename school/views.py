@@ -6,15 +6,19 @@ from django.contrib.auth import authenticate
 from rest_framework import generics
 
 from school.models import GroupChatMessage
-from .serializers import AssignmentSerializer, AttendanceSerializer, ClassSerializer, CustomUserSerializer, GroupChatMessageSerializer, StudentSerializer, SubjectSerializer, TeacherSerializer,AssignmentSubmissionSerializer
+from .serializers import AssignmentSerializer, AttendanceSerializer, ClassSerializer, CustomUserSerializer, GroupChatMessageSerializer, StudentSerializer, SubjectSerializer, TeacherSerializer,AssignmentSubmissionSerializer,NotificationSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from student.models import Student, AssignmentSubmission,Attendance
+from student.models import Student, AssignmentSubmission,Attendance, Notification
 from teacher.models import Assignment, Teacher, Class, Subject
+import pandas as pd
+import csv
+from django.http import HttpResponse
+from django.db.models import Q
 # Create your views here.
 
 
@@ -143,7 +147,7 @@ class AllTeacherListView(generics.ListAPIView):
 
 
 class getStudentClasses(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     def get(self, request):
         student_id = request.GET.get('student_id')
         print(student_id)
@@ -244,7 +248,7 @@ class StudentAssignmentSubmission(APIView):
         assignment_id = Assignment.objects.get(id= assignment_id)
         if AssignmentSubmission.objects.filter(student = student , assignment = assignment_id).exists():
             allData = AssignmentSubmission.objects.get(student = student , assignment = assignment_id)
-            return Response({"assignment_status" : "Submitted", "feedback":allData.feedback},status=status.HTTP_200_OK)
+            return Response({"assignment_status" : allData.status, "feedback":allData.feedback, "grade":allData.grade},status=status.HTTP_200_OK)
         else:
            return Response({"assignment_status" : "Pending"},status=status.HTTP_200_OK)
         
@@ -294,6 +298,8 @@ class AssignmentSubmissionFeedback(APIView):
         assignment_id = Assignment.objects.get(id= assignment_id)
         Asd = AssignmentSubmission.objects.get(student = student , assignment = assignment_id)
         Asd.feedback = request.data['feedback']
+        Asd.grade = request.data['grade']
+        Asd.status = "graded"
         Asd.save()
         return Response({"data":"successfully add"})
 
@@ -336,7 +342,7 @@ class AssignmentSubmissionDetails(APIView):
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
         submissions = AssignmentSubmission.objects.filter(assignment=assignment)
-        submitted_students = submissions.filter(status='submitted')
+        submitted_students = submissions.filter(Q(status ='submitted')| Q(status='graded'))
         remaining_students = Student.objects.filter(class_name=assignment.class_model).exclude(id__in=submitted_students.values('student'))
 
         data = {
@@ -493,3 +499,74 @@ class RemoveStudentFromClass(generics.CreateAPIView):
         
 
 
+
+
+
+def download_grades_csv(request, class_id):
+    # Fetch all submissions for a given class
+    submissions = AssignmentSubmission.objects.filter(assignment__class_model=class_id)
+
+    # Create the HttpResponse object with CSV header
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="grades_class_{class_id}.csv"'
+
+    writer = csv.writer(response)
+    # Write header
+    writer.writerow(['Student Name', "Assignment Name", "Subject", 'Grade', 'Feedback'])
+    
+    # Write data from each submission
+    for submission in submissions:
+        writer.writerow([submission.student.first_name,submission.assignment.title, submission.assignment.subject.name ,submission.grade, submission.feedback])
+
+    return response
+
+def download_grades_excel(request, class_id):
+    submissions = AssignmentSubmission.objects.filter(assignment__class_model=class_id)
+    data = [{
+        'Student Name': submission.student.first_name,
+        "Assignment Name":submission.assignment.title,
+        "Subject":submission.assignment.subject.name ,
+        'Grade': submission.grade,
+        'Feedback': submission.feedback
+    } for submission in submissions]
+
+    df = pd.DataFrame(data)
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="grades_class_{class_id}.xlsx"'
+
+    with pd.ExcelWriter(response, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Grades')
+
+    return response
+
+
+
+class NotificationView(generics.ListCreateAPIView):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+
+    def list(self, request, *args, **kwargs):
+        
+        student_id = kwargs.get('student_id')
+        print('stu:',student_id)
+        if not student_id:
+            return Response({"message":"student id is required"},status=status.HTTP_400_BAD_REQUEST)
+        
+        student = Student.objects.get(id=student_id)
+        queryset = Notification.objects.filter(user = student)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def create(self, request, *args, **kwargs):
+        student_id = kwargs.get('student_id')
+        if not student_id:
+            return Response({"message":"student id is required"},status=status.HTTP_400_BAD_REQUEST)
+        
+        student = Student.objects.get(id=student_id)
+        queryset = Notification.objects.filter(user = student)
+        for i in queryset:
+            i.read = True
+            i.save()
+        
+        return Response({'message':'successfully reads notifications'},status=status.HTTP_200_OK)
+    

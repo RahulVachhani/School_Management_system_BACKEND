@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser, GroupChatMessage
-from student.models import Attendance, Student,AssignmentSubmission
+from student.models import Attendance, Student,AssignmentSubmission, Notification
 from teacher.models import Class, Subject, Teacher, Assignment
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -153,3 +153,8 @@ class GroupChatMessageSerializer(serializers.ModelSerializer):
         model = GroupChatMessage
         fields = ['id','sender', 'message', 'created_at']
         
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id','message','read']

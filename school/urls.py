@@ -48,7 +48,11 @@ urlpatterns = [
 
 
     # CHAT ROOM
-    path('school/chatroom/',views.GroupChatView.as_view())
+    path('school/chatroom/',views.GroupChatView.as_view()),
+    path('grades/csv/<str:class_id>/', views.download_grades_csv, name='download_grades_csv'),
+    path('grades/excel/<str:class_id>/',views.download_grades_excel),
+
+    path('school/notification/<str:student_id>/',views.NotificationView.as_view())
 
 ]
 

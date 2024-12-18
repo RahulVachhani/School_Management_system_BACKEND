@@ -4,6 +4,10 @@ from django.conf import settings
 
 from teacher.models import Class,Assignment
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
 class Student(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="student_profile", blank=True, null=True)
     first_name = models.CharField(max_length=100, blank=True)
@@ -29,6 +33,14 @@ class AssignmentSubmission(models.Model):
         max_length=20,
         choices=[('pending', 'Pending'), ('graded', 'Graded'), ('submitted', 'Submitted')],
         default='pending'
+    )
+
+    grade = models.CharField(
+        max_length=1,
+        choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('F', 'F')],
+        null=True,
+        blank=True,
+        help_text="Grade for the submission (A, B, C, D, or F)"
     )
 
 
@@ -65,3 +77,26 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student.first_name} - {self.class_name.name} ({self.date})"
+    
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(Student, on_delete=models.CASCADE)
+    message = models.TextField()
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification for {self.user.first_name} - {self.message[:50]}"
+    
+
+
+@receiver(post_save, sender=Assignment)
+def send_assignment_notification(sender, instance, created, **kwargs):
+    if created:
+        students = Student.objects.filter(class_name=instance.class_model)
+        for student in students:
+            Notification.objects.create(
+                user=student,
+                message=f"New assignment posted: {instance.title}",
+            )
