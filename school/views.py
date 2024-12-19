@@ -554,8 +554,9 @@ class NotificationView(generics.ListCreateAPIView):
         
         student = Student.objects.get(id=student_id)
         queryset = Notification.objects.filter(user = student)
+        unreadCount = queryset.filter(read=False).count()
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"notification":serializer.data,"unReadCount":unreadCount}, status=status.HTTP_200_OK)
     
     def create(self, request, *args, **kwargs):
         student_id = kwargs.get('student_id')
