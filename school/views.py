@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date,datetime
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth import authenticate
@@ -229,13 +229,15 @@ class GetStudentAssignments(APIView):
         student_classes = student.class_name
 
         
-        assignments = Assignment.objects.filter(class_model=student_classes)
-
+        assignments = Assignment.objects.filter(class_model=student_classes,due_date__gt=datetime.now())
+        old_assignments = Assignment.objects.filter(class_model=student_classes,due_date__lt=datetime.now())
        
         assignment_data = AssignmentSerializer(assignments, many=True)
+        old_assignments_data = AssignmentSerializer(old_assignments,many=True)
 
         return Response({
-            "assignments": assignment_data.data
+            "assignments": assignment_data.data,
+            'old_assignment': old_assignments_data.data
         }, status=status.HTTP_200_OK)
 
 
@@ -256,7 +258,7 @@ class StudentAssignmentSubmission(APIView):
     def post(self, request):
         student_id = request.GET.get('student_id')
         assignment_id = request.GET.get('assignment_id')
-
+        print('student:',student_id)
         if not student_id:
             return Response({"error": "Student ID is required"}, status=status.HTTP_400_BAD_REQUEST)
         if not assignment_id:
@@ -321,6 +323,7 @@ class getClassAssignment(APIView):
         print('sbid :',subject_id)
         if subject_id:
             assignments = Assignment.objects.filter(class_model_id=class_id , subject_id=subject_id)
+            print('ass :',assignments)
         else:
             assignments = Assignment.objects.filter(class_model_id=class_id)
 
@@ -570,4 +573,6 @@ class NotificationView(generics.ListCreateAPIView):
             i.save()
         
         return Response({'message':'successfully reads notifications'},status=status.HTTP_200_OK)
+    
+    
     
