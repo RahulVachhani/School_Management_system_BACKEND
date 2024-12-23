@@ -98,5 +98,5 @@ def send_assignment_notification(sender, instance, created, **kwargs):
         for student in students:
             Notification.objects.create(
                 user=student,
-                message=f"New assignment posted: {instance.title}",
+                message=f"New assignment posted: Title : {instance.title} || Due Date : {instance.due_date} || Subject : {instance.subject.name}",
             )

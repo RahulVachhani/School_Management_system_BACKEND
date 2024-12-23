@@ -257,7 +257,6 @@ class GetStudentAssignments(APIView):
         }, status=status.HTTP_200_OK)
 
 
-
 class StudentAssignmentSubmission(APIView): 
     def get(self,request):
         student_id = request.GET.get('student_id')
@@ -270,7 +269,6 @@ class StudentAssignmentSubmission(APIView):
         else:
            return Response({"assignment_status" : "Pending"},status=status.HTTP_200_OK)
         
-
     def post(self, request):
         student_id = request.GET.get('student_id')
         assignment_id = request.GET.get('assignment_id')
@@ -446,8 +444,17 @@ class ShowAttendance(APIView):
         student_id = request.GET.get('student_id')
         student = Student.objects.get(id = student_id)
 
+        from_date = request.GET.get('from')
+        to_date = request.GET.get('to')
+
         record = Attendance.objects.filter(student = student)
-        print('record :',record)
+        if from_date and to_date:
+            # from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+            # to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
+            print('f :',from_date)
+            record = record.filter(date__range=(from_date, to_date))
+
+        # print('record :',record)
         serializer = AttendanceSerializer(record,many=True)       
         return Response(serializer.data, status=status.HTTP_200_OK)
 

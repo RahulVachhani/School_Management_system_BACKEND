@@ -109,7 +109,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'due_date', 'subject', 'class_model', 'teacher','subject_id', 'class_model_id', 'teacher_id']
+        fields = ['id', 'title', 'description', 'due_date', 'subject', 'class_model', 'teacher','subject_id', 'class_model_id', 'teacher_id','file']
         
     def create(self, validated_data):
         # Extract IDs for writable fields

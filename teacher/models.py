@@ -60,6 +60,7 @@ class Assignment(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='ass')
     class_model = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='ass')
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='ass')
+    file = models.FileField(upload_to='file/', null=True, blank=True)
 
     def __str__(self):
         return f"Assignment: {self.title} for {self.class_model.name} ({self.subject.name})"
