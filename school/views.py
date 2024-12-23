@@ -121,7 +121,23 @@ class AllStudentDetails(generics.ListCreateAPIView):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
 
+class SingleStudentDetails(generics.RetrieveUpdateAPIView):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
 
+    def update(self, request, *args, **kwargs):
+        try:
+            partial = kwargs.pop('partial', False)  # Use PATCH if partial update is needed
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    def perform_update(self, serializer):
+        serializer.save()
 
 class RemoveStudent(generics.DestroyAPIView):
     queryset = Student.objects.all()
@@ -576,3 +592,25 @@ class NotificationView(generics.ListCreateAPIView):
     
     
     
+
+class Announcements(generics.CreateAPIView):
+     serializer_class = NotificationSerializer
+
+     def create(self, request, *args, **kwargs):
+        class_id = kwargs.get('class_id')
+        message = request.data.get('message')
+        if not message:
+             return Response({'message':"message field is required"},status=status.HTTP_400_BAD_REQUEST)
+        if not class_id:
+             return Response({'message':"class ID is required"},status=status.HTTP_400_BAD_REQUEST)
+        classes = Class.objects.get(id = class_id)
+        students = classes.students.all()
+        print('stuAll :',students)
+        for student in students:
+            notification = Notification.objects.create(
+                user= student,
+                message = message
+            )
+            notification.save()
+        return Response({'message':'succesfully Announcements Done'})
+         

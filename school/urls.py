@@ -15,6 +15,7 @@ urlpatterns = [
 
     # STUDENTS DETAILS
     path('all/students/', views.AllStudentDetails.as_view() , name = 'all_students'),
+    path('single/student/<str:pk>/', views.SingleStudentDetails.as_view() , name = 'single_students'),
     path('all/students/<str:pk>/', views.RemoveStudent.as_view() , name = 'remove_student'),
     path('student/classes-subjects/', views.getStudentClasses.as_view(), name='student_classes_subjects'),
 
@@ -52,7 +53,8 @@ urlpatterns = [
     path('grades/csv/<str:class_id>/', views.download_grades_csv, name='download_grades_csv'),
     path('grades/excel/<str:class_id>/',views.download_grades_excel),
 
-    path('school/notification/<str:student_id>/',views.NotificationView.as_view())
+    path('school/notification/<str:student_id>/',views.NotificationView.as_view()),
+    path('school/class/announcement/<str:class_id>/',views.Announcements.as_view())
 
 ]
 
